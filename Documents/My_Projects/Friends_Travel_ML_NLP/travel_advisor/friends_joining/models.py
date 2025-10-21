@@ -1,28 +1,58 @@
+# friends_joining/models.py
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-# Create your models here.
+
+class IndividualFriend(AbstractUser):
+
+    state_residence = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+
+
+    destinations = models.JSONField(default=list, blank=True, null=True)
+
+    friend_group = models.ForeignKey(
+        'Creating_group',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='members'
+    )
+
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name='groups',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        related_name='individualfriend_set',
+        related_query_name='individualfriend',
+    )
+
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name='user permissions',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        related_name='individualfriend_set',
+        related_query_name='individualfriend',
+    )
+
+    def __str__(self):
+        return self.username
+
+
 class Preference_list(models.Model):
-    value=models.CharField(max_length=100)#this will store the places where the user wants to go
-    description=models.CharField(max_length=100)#this will contain the description of the preference list the user can provide
+    value = models.CharField(max_length=100)
+    description = models.CharField(max_length=100)
+    sentiment_score = models.FloatField(null=True, blank=True)
+    normalized_score = models.FloatField(null=True, blank=True)
+
     def __str__(self):
         return self.value
 
+
 class Creating_group(models.Model):
-    create_spid=models.CharField(max_length=100)#this will generate the name for the group which will be used as the table name for the group of friends with the same spid
-    # write_spid=models.CharField(max_length=100)#if the friends have the same spid then the user will be added to the particular table
+    create_spid = models.CharField(max_length=100, unique=True)
+
     def __str__(self):
         return self.create_spid
-
-class IndividualFriend(models.Model):
-    name=models.CharField(max_length=100)
-    state_residence=models.CharField(max_length=100)
-    city=models.CharField(max_length=100)
-    choices=models.ForeignKey(Preference_list,on_delete=models.CASCADE)
-    groups=models.ForeignKey(Creating_group,on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.name
-
-
-
-

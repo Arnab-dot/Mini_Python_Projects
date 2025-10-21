@@ -1,38 +1,61 @@
+
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from travel_advisor.friends_joining.models import IndividualFriend, Preference_list
+from django.contrib.auth import authenticate
+from .models import IndividualFriend, Creating_group, Preference_list
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, min_length=6)
+
+    class Meta:
+        model = IndividualFriend
+        fields = ['username', 'password']
+
+    def create(self, validated_data):
+        user = IndividualFriend.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        return user
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        username = data.get('username')
+        password = data.get('password')
+
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if user:
+                if user.is_active:
+                    data['user'] = user
+                else:
+                    raise serializers.ValidationError('User account is disabled.')
+            else:
+                raise serializers.ValidationError('Unable to login with provided credentials.')
+        else:
+            raise serializers.ValidationError('Must include "username" and "password".')
+
+        return data
+
+
+class PreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Preference_list
+        fields = ['id', 'value', 'description', 'sentiment_score', 'normalized_score']
+        read_only_fields = ['id', 'sentiment_score', 'normalized_score']
 
 
 class FriendGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = IndividualFriend
-        fields = ["create_spid", "name", "state", "city", "choices", "groups"]
-
-    def validate(self, attrs):
-        destination = attrs.get("choices")   # adjust field if different
-        user = attrs.get("name")
-
-        if Preference_list.objects.filter(value=destination, description=user).exists():
-            raise ValidationError(
-                "You cannot enter the same destination twice with the same name."
-            )
-        return attrs
+        fields = ['username', 'state_residence', 'city', 'choices', 'friend_group']
 
 
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
-
+class CreatingGroupSerializer(serializers.ModelSerializer):
     class Meta:
-        model = IndividualFriend
-        fields = ["name", "password"]
-
-    def validate_name(self, value):
-        if IndividualFriend.objects.filter(name=value).exists():
-            raise ValidationError("User is already registered")
-        return value
-
-    def create(self, validated_data):
-        friend = IndividualFriend(
-            name=validated_data["name"],
-        )
-
+        model = Creating_group
+        fields = ['create_spid']
